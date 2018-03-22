@@ -390,8 +390,8 @@ struct _swServer
     uint32_t max_wait_time;
 
     /*----------------------------Reactor schedule--------------------------------*/
-    uint16_t reactor_round_i;
-    uint16_t reactor_next_i;
+    uint16_t reactor_round_i;   // 轮询调度
+    uint16_t reactor_next_i;    // 平均算法调度
     uint16_t reactor_schedule_count;
 
     sw_atomic_t worker_round_id;

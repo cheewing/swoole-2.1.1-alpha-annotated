@@ -48,7 +48,7 @@ static void swHeartbeatThread_loop(swThreadParam *param);
 
 static swConnection* swServer_connection_new(swServer *serv, swListenPort *ls, int fd, int from_fd, int reactor_id);
 
-swServerG SwooleG;
+swServerG SwooleG;      // 
 swServerGS *SwooleGS;
 swWorkerG SwooleWG;
 swServerStats *SwooleStats;
@@ -102,6 +102,9 @@ void swServer_close_port(swServer *serv, enum swBool_type only_stream_port)
     }
 }
 
+/**
+ *
+ */
 int swServer_master_onAccept(swReactor *reactor, swEvent *event)
 {
     swServer *serv = reactor->ptr;
@@ -115,6 +118,15 @@ int swServer_master_onAccept(swReactor *reactor, swEvent *event)
     //SW_ACCEPT_AGAIN
     for (i = 0; i < SW_ACCEPT_MAX_COUNT; i++)
     {
+        /*
+        #include <sys/types.h> 
+        #include <sys/socket.h>
+        int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
+        #define _GNU_SOURCE 
+        #include <sys/socket.h>
+        int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+        */
 #ifdef HAVE_ACCEPT4
         new_fd = accept4(event->fd, (struct sockaddr *) &client_addr, &client_addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
 #else
@@ -124,12 +136,12 @@ int swServer_master_onAccept(swReactor *reactor, swEvent *event)
         {
             switch (errno)
             {
-            case EAGAIN:
+            case EAGAIN:        // 套接口被标记为非阻塞并且没有连接等待接受
                 return SW_OK;
-            case EINTR:
+            case EINTR:         // 在一个有效的连接到达之前，本系统调用被信号中断，参看 signal(7)。
                 continue;
             default:
-                if (errno == EMFILE || errno == ENFILE)
+                if (errno == EMFILE || errno == ENFILE)  // EMFILE达到单个进程打开的文件描述上限。 ENFILE达到系统允许打开文件个数的全局上限。
                 {
                     swServer_disable_accept(reactor);
                     reactor->disable_accept = 1;
