@@ -1058,7 +1058,7 @@ int swReactorThread_create(swServer *serv)
      */
     if (serv->factory_mode == SW_MODE_PROCESS)
     {
-        serv->connection_list = sw_shm_calloc(serv->max_connection, sizeof(swConnection));
+        serv->connection_list = sw_shm_calloc(serv->max_connection, sizeof(swConnection));      // 共享内存中分配
     }
     else
     {

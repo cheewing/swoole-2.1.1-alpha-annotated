@@ -705,11 +705,12 @@ int swWorker_loop(swFactory *factory, int worker_id)
 
     //worker_id
     SwooleWG.id = worker_id;
-    SwooleG.pid = getpid();
+    SwooleG.pid = getpid();         // SwooleG归属于每个进程
 
-    swWorker *worker = swServer_get_worker(serv, worker_id);
-    swServer_worker_init(serv, worker);
+    swWorker *worker = swServer_get_worker(serv, worker_id);    // 获取共享内存区存储的worker
+    swServer_worker_init(serv, worker);     // worker进程初始化
 
+    // 创建worker_reactor
     SwooleG.main_reactor = sw_malloc(sizeof(swReactor));
     if (SwooleG.main_reactor == NULL)
     {
@@ -723,11 +724,11 @@ int swWorker_loop(swFactory *factory, int worker_id)
         return SW_ERR;
     }
     
-    worker->status = SW_WORKER_IDLE;
+    worker->status = SW_WORKER_IDLE;        // 新创建的worker状态都是IDLE
 
     int pipe_worker = worker->pipe_worker;
 
-    swSetNonBlock(pipe_worker);
+    swSetNonBlock(pipe_worker);             // 设置非阻塞
     SwooleG.main_reactor->ptr = serv;
     SwooleG.main_reactor->add(SwooleG.main_reactor, pipe_worker, SW_FD_PIPE | SW_EVENT_READ);
     SwooleG.main_reactor->setHandle(SwooleG.main_reactor, SW_FD_PIPE, swWorker_onPipeReceive);

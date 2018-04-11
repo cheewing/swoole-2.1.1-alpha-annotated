@@ -30,38 +30,40 @@
 void swoole_init(void)
 {
     struct rlimit rlmt;
-    if (SwooleG.running)
+    if (SwooleG.running)        // 如果server正在运行，停止初始化
     {
         return;
     }
 
     bzero(&SwooleG, sizeof(SwooleG));
     bzero(&SwooleWG, sizeof(SwooleWG));
-    bzero(sw_error, SW_ERROR_MSG_SIZE);
+    bzero(sw_error, SW_ERROR_MSG_SIZE);         
 
-    SwooleG.running = 1;
-    sw_errno = 0;
+    SwooleG.running = 1;        // 标记server运行状态
+    sw_errno = 0;               // errno初始化0
 
-    SwooleG.log_fd = STDOUT_FILENO;
-    SwooleG.cpu_num = sysconf(_SC_NPROCESSORS_ONLN);
-    SwooleG.pagesize = getpagesize();
-    SwooleG.pid = getpid();
+    SwooleG.log_fd = STDOUT_FILENO;                     // 初始化日志fd为标准输出fd
+    SwooleG.cpu_num = sysconf(_SC_NPROCESSORS_ONLN);    // 系统当前可用的核数
+    SwooleG.pagesize = getpagesize();    // 内存分页大小
+    SwooleG.pid = getpid();     // master进程id
     SwooleG.socket_buffer_size = SW_SOCKET_BUFFER_SIZE;
-    SwooleG.log_level = SW_LOG_INFO;
+    SwooleG.log_level = SW_LOG_INFO;        // 默认日志等级为info
 
     //get system uname
-    uname(&SwooleG.uname);
+    uname(&SwooleG.uname);          // 获取当前操作系统名称
 
     //random seed
-    srandom(time(NULL));
+    srandom(time(NULL));            // 随机种子
 
-    //init global shared memory
+    //init global shared memory  全局共享内存
     SwooleG.memory_pool = swMemoryGlobal_new(SW_GLOBAL_MEMORY_PAGESIZE, 1);
     if (SwooleG.memory_pool == NULL)
     {
         printf("[Master] Fatal Error: global memory allocation failure.");
         exit(1);
     }
+
+    // 全局共享内存中保存swServerGS
     SwooleGS = SwooleG.memory_pool->alloc(SwooleG.memory_pool, sizeof(swServerGS));
     if (SwooleGS == NULL)
     {
@@ -74,6 +76,13 @@ void swoole_init(void)
     swMutex_create(&SwooleGS->lock_2, 1);
     swMutex_create(&SwooleG.lock, 0);
 
+    /*
+        获取或设定资源使用限制。每种资源都有相关的软硬限制，软限制是内核强加给相应资源的限制值，
+        硬限制是软限制的最大值。非授权调用进程只可以将其软限制指定为0~硬限制范围中的某个值，
+        同时能不可逆转地降低其硬限制。授权进程可以任意改变其软硬限制。RLIM_INFINITY的值表示不对资源限制。
+     * 进程所能打开（如使用open/pipe/socket）的文件描述符的最大值加1。
+     * 注意，进程间的文件描述符是独立的。超出该限制会抛出EMFILE错误。
+     */
     if (getrlimit(RLIMIT_NOFILE, &rlmt) < 0)
     {
         swWarn("getrlimit() failed. Error: %s[%d]", strerror(errno), errno);
@@ -81,21 +90,24 @@ void swoole_init(void)
     }
     else
     {
-        SwooleG.max_sockets = (uint32_t) rlmt.rlim_cur;
+        SwooleG.max_sockets = (uint32_t) rlmt.rlim_cur;  // 软限制是内核强加给相应资源的限制值
     }
 
+    // module_stack 不知何方神圣
     SwooleG.module_stack = swString_new(8192);
     if (SwooleG.module_stack == NULL)
     {
         exit(3);
     }
 
+    // task临时目录
     if (!SwooleG.task_tmpdir)
     {
         SwooleG.task_tmpdir = sw_strndup(SW_TASK_TMP_FILE, sizeof(SW_TASK_TMP_FILE));
         SwooleG.task_tmpdir_len = sizeof(SW_TASK_TMP_FILE);
     }
 
+    // get parent dir name
     char *tmp_dir = swoole_dirname(SwooleG.task_tmpdir);
     //create tmp dir
     if (access(tmp_dir, R_OK) < 0 && swoole_mkdir_recursive(tmp_dir) < 0)
@@ -124,6 +136,7 @@ void swoole_init(void)
     SwooleG.debug = 1;
 #endif
 
+    // 全局共享内存存储swServerStats
     SwooleStats = SwooleG.memory_pool->alloc(SwooleG.memory_pool, sizeof(swServerStats));
     if (SwooleStats == NULL)
     {

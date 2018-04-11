@@ -39,7 +39,7 @@ static int _lock = 0;
 static void swSignal_async_handler(int signo);
 
 /**
- * clear all singal
+ * clear all signal
  */
 void swSignal_none(void)
 {

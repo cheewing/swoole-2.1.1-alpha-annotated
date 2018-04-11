@@ -409,28 +409,30 @@ typedef void (*swCallback)(void *data);
 typedef struct
 {
     uint32_t id;
-    uint32_t fd :24;
-    uint32_t reactor_id :8;
+    uint32_t fd :24;            
+    uint32_t reactor_id :8;     // reactor id
 } swSession;
 
 typedef struct _swString
 {
-    size_t length;
-    size_t size;
-    off_t offset;
-    char *str;
+    size_t length;      // swString大小，sizeof(swString) + length
+    size_t size;        // 字符串长度
+    off_t offset;       // str偏移
+    char *str;          // 字符串
 } swString;
 
 typedef void* swObject;
 
+// 链表节点
 typedef struct _swLinkedList_node
 {
     struct _swLinkedList_node *prev;
     struct _swLinkedList_node *next;
-    ulong_t priority;
-    void *data;
+    ulong_t priority;   // 优先级
+    void *data;         // 数据
 } swLinkedList_node;
 
+// 链表
 typedef struct
 {
     uint32_t num;
@@ -440,6 +442,7 @@ typedef struct
     swDestructor dtor;
 } swLinkedList;
 
+// socket地址
 typedef struct
 {
     union
@@ -451,12 +454,13 @@ typedef struct
     socklen_t len;
 } swSocketAddress;
 
+// swoole连接
 typedef struct _swConnection
 {
     /**
      * file descript
      */
-    int fd;
+    int fd;         // 
 
     /**
      * session id
@@ -466,7 +470,7 @@ typedef struct _swConnection
     /**
      * socket type, SW_SOCK_TCP or SW_SOCK_UDP
      */
-    uint16_t socket_type;
+    uint16_t socket_type;           
 
     /**
      * fd type, SW_FD_TCP or SW_FD_PIPE or SW_FD_TIMERFD
@@ -519,7 +523,7 @@ typedef struct _swConnection
     /**
      * ReactorThread id
      */
-    uint16_t from_id;
+    uint16_t from_id;       // ReactorThread id，reactor线程投递给worker进程处理
 
     /**
      * close error code
@@ -529,7 +533,7 @@ typedef struct _swConnection
     /**
      * from which socket fd
      */
-    sw_atomic_t from_fd;
+    sw_atomic_t from_fd;    // accept后connect fd
 
     /**
      * socket address
@@ -626,6 +630,7 @@ size_t swoole_utf8_length(u_char *p, size_t n);
 void swoole_random_string(char *buf, size_t size);
 char* swoole_get_mimetype(char *file);
 
+// 找到字符串以c为首的子串
 static sw_inline char *swoole_strlchr(char *p, char *last, char c)
 {
     while (p < last)
@@ -639,6 +644,7 @@ static sw_inline char *swoole_strlchr(char *p, char *last, char c)
     return NULL;
 }
 
+// size ~ size + pagesize
 static sw_inline size_t swoole_size_align(size_t size, int pagesize)
 {
     return size + (pagesize - (size % pagesize));
@@ -692,14 +698,15 @@ static sw_inline int swString_extend_align(swString *str, size_t _new_size)
 #define swString_length(s) (s->length)
 #define swString_ptr(s) (s->str)
 //------------------------------Base--------------------------------
+// 数据头
 typedef struct _swDataHead
 {
-    int fd;
+    int fd;                 // 
     uint16_t len;
-    int16_t from_id;
+    int16_t from_id;        // reactor thread id
     uint8_t type;
     uint8_t flags;
-    uint16_t from_fd;
+    uint16_t from_fd;       // socket fd
 } swDataHead;
 
 typedef struct _swEvent
@@ -748,21 +755,23 @@ typedef struct _swDgramPacket
     char data[0];
 } swDgramPacket;
 
+// 发送数据
 typedef struct _swSendData
 {
-    swDataHead info;
+    swDataHead info;        // 数据头信息
     /**
      * for big package
      */
-    uint32_t length;
-    char *data;
+    uint32_t length;        // big package时length>0
+    char *data;             // 真正的数据
 } swSendData;
 
+// 发送数据请求
 typedef struct
 {
-    off_t offset;
-    size_t length;
-    char filename[0];
+    off_t offset;           // 偏移
+    size_t length;          // 请求长度
+    char filename[0];       // 对比char *filename
 } swSendFile_request;
 
 //------------------TimeWheel--------------------
@@ -781,11 +790,12 @@ typedef struct _swReactor swReactor;
 
 typedef int (*swReactor_handle)(swReactor *reactor, swEvent *event);
 //------------------Pipe--------------------
+// 管道
 typedef struct _swPipe
 {
     void *object;
-    int blocking;
-    double timeout;
+    int blocking;       // 是否阻塞
+    double timeout;     // 超时时间
 
     int (*read)(struct _swPipe *, void *recv, int length);
     int (*write)(struct _swPipe *, void *send, int length);
@@ -793,13 +803,14 @@ typedef struct _swPipe
     int (*close)(struct _swPipe *);
 } swPipe;
 
+// pipe 关闭选项
 enum _swPipe_close_which
 {
-    SW_PIPE_CLOSE_MASTER = 1,
-    SW_PIPE_CLOSE_WORKER = 2,
-    SW_PIPE_CLOSE_READ   = 3,
-    SW_PIPE_CLOSE_WRITE  = 4,
-    SW_PIPE_CLOSE_BOTH   = 0,
+    SW_PIPE_CLOSE_MASTER = 1,       // master进程
+    SW_PIPE_CLOSE_WORKER = 2,       // worker进程
+    SW_PIPE_CLOSE_READ   = 3,       // 关闭读
+    SW_PIPE_CLOSE_WRITE  = 4,       // 关闭写
+    SW_PIPE_CLOSE_BOTH   = 0,       // 关闭读&写
 };
 
 int swPipeBase_create(swPipe *p, int blocking);
@@ -825,10 +836,11 @@ typedef struct _swQueue_Data
     char mdata[sizeof(swEventData)]; /* text of the message */
 } swQueue_data;
 
+// 消息队列
 typedef struct _swMsgQueue
 {
-    int blocking;
-    int msg_id;
+    int blocking;           // 是否阻塞
+    int msg_id;             // 消息id
     int flags;
     uint8_t remove;
     long type;
@@ -842,6 +854,7 @@ int swMsgQueue_stat(swMsgQueue *q, int *queue_num, int *queue_bytes);
 void swMsgQueue_free(swMsgQueue *q);
 
 //------------------Lock--------------------------------------
+// swoole锁枚举
 enum SW_LOCKS
 {
     SW_RWLOCK = 1,
@@ -863,6 +876,7 @@ enum swDNSLookup_cache_type
     SW_DNS_LOOKUP_RANDOM  = (1u << 11),
 };
 
+// 请求地址信息
 typedef struct
 {
     char *hostname;
@@ -889,6 +903,7 @@ typedef struct _swMutex
     pthread_mutexattr_t attr;
 } swMutex;
 
+// 读写锁
 #ifdef HAVE_RWLOCK
 typedef struct _swRWLock
 {
@@ -898,6 +913,7 @@ typedef struct _swRWLock
 } swRWLock;
 #endif
 
+// 自旋锁
 #ifdef HAVE_SPINLOCK
 typedef struct _swSpinLock
 {
@@ -905,18 +921,21 @@ typedef struct _swSpinLock
 } swSpinLock;
 #endif
 
+// 原子锁
 typedef struct _swAtomicLock
 {
     sw_atomic_t lock_t;
     uint32_t spin;
 } swAtomicLock;
 
+// 信号量
 typedef struct _swSem
 {
     key_t key;
     int semid;
 } swSem;
 
+// swoole锁
 typedef struct _swLock
 {
 	int type;
@@ -942,7 +961,7 @@ typedef struct _swLock
     int (*free)(struct _swLock *);
 } swLock;
 
-//Thread Condition
+//Thread Condition 条件变量
 typedef struct _swCond
 {
     swLock _lock;
@@ -959,6 +978,7 @@ typedef struct _swCond
 
 #define SW_SHM_MMAP_FILE_LEN  64
 
+// 共享内存
 typedef struct _swShareMemory_mmap
 {
     size_t size;
@@ -975,6 +995,7 @@ int swShareMemory_sysv_free(swShareMemory *object, int rm);
 int swShareMemory_mmap_free(swShareMemory *object);
 
 //-------------------memory manager-------------------------
+// 内存池
 typedef struct _swMemoryPool
 {
 	void *object;
@@ -983,6 +1004,7 @@ typedef struct _swMemoryPool
 	void (*destroy)(struct _swMemoryPool *pool);
 } swMemoryPool;
 
+// 固定类型内存池分片
 typedef struct _swFixedPool_slice
 {
     uint8_t lock;
@@ -992,6 +1014,7 @@ typedef struct _swFixedPool_slice
 
 } swFixedPool_slice;
 
+// 固定内存池
 typedef struct _swFixedPool
 {
     void *memory;
@@ -1061,6 +1084,7 @@ int swSpinLock_create(swLock *object, int spin);
 int swAtomicLock_create(swLock *object, int spin);
 int swCond_create(swCond *cond);
 
+// 线程参数
 typedef struct _swThreadParam
 {
 	void *object;
@@ -1070,15 +1094,17 @@ typedef struct _swThreadParam
 extern int16_t sw_errno;
 extern char sw_error[SW_ERROR_MSG_SIZE];
 
+// 进程类型
 enum swProcessType
 {
-    SW_PROCESS_MASTER     = 1,
-    SW_PROCESS_WORKER     = 2,
-    SW_PROCESS_MANAGER    = 3,
-    SW_PROCESS_TASKWORKER = 4,
-    SW_PROCESS_USERWORKER = 5,
+    SW_PROCESS_MASTER     = 1,          // master进程
+    SW_PROCESS_WORKER     = 2,          // worker进程
+    SW_PROCESS_MANAGER    = 3,          // manager进程
+    SW_PROCESS_TASKWORKER = 4,          // task worker进程
+    SW_PROCESS_USERWORKER = 5,          // user worker进程
 };
 
+// 判断进程类型
 #define swIsMaster()          (SwooleG.process_type==SW_PROCESS_MASTER)
 #define swIsWorker()          (SwooleG.process_type==SW_PROCESS_WORKER)
 #define swIsTaskWorker()      (SwooleG.process_type==SW_PROCESS_TASKWORKER)
@@ -1105,6 +1131,7 @@ static sw_inline uint32_t swoole_swap_endian32(uint32_t x)
     return (((x & 0xff) << 24) | ((x & 0xff00) << 8) | ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24));
 }
 
+// 解包
 static sw_inline int32_t swoole_unpack(char type, void *data)
 {
     switch(type)
@@ -1163,6 +1190,7 @@ static sw_inline int32_t swoole_unpack(char type, void *data)
     }
 }
 
+// 找needle子串
 static inline char* swoole_strnstr(char *haystack, char *needle, uint32_t length)
 {
     int i;
@@ -1181,6 +1209,7 @@ static inline char* swoole_strnstr(char *haystack, char *needle, uint32_t length
     return NULL;
 }
 
+// 子串位置
 static inline int swoole_strnpos(char *haystack, uint32_t haystack_length, char *needle, uint32_t needle_length)
 {
     assert(needle_length > 0);
@@ -1198,6 +1227,7 @@ static inline int swoole_strnpos(char *haystack, uint32_t haystack_length, char 
     return -1;
 }
 
+// 子串尾部位置
 static inline int swoole_strrnpos(char *haystack, char *needle, uint32_t length)
 {
     uint32_t needle_length = strlen(needle);
@@ -1217,6 +1247,7 @@ static inline int swoole_strrnpos(char *haystack, char *needle, uint32_t length)
     return -1;
 }
 
+// 字符串变小写
 static inline void swoole_strtolower(char *str, int length)
 {
     char *c, *e;
@@ -1334,6 +1365,7 @@ int swSocket_sendfile_sync(int sock, char *filename, off_t offset, size_t length
 int swSocket_write_blocking(int __fd, void *__data, int __len);
 int swSocket_recv_blocking(int fd, void *__data, size_t __len, int flags);
 
+// 循环waitpid，直到捕获到进程终止信息
 static sw_inline int swWaitpid(pid_t __pid, int *__stat_loc, int __options)
 {
     int ret;
@@ -1349,6 +1381,7 @@ static sw_inline int swWaitpid(pid_t __pid, int *__stat_loc, int __options)
     return ret;
 }
 
+// 循环给进程发信号，直到成功为止
 static sw_inline int swKill(pid_t __pid, int __sig)
 {
     int ret;
@@ -1385,6 +1418,7 @@ void swSignalfd_init();
 int swSignalfd_setup(swReactor *reactor);
 #endif
 
+// 延迟回调
 typedef struct _swDefer_callback
 {
     struct _swDefer_callback *next, *prev;
@@ -1392,29 +1426,30 @@ typedef struct _swDefer_callback
     void *data;
 } swDefer_callback;
 
+// Reactor
 struct _swReactor
 {
-    void *object;
+    void *object;   // server
     void *ptr;  //reserve
 
     /**
      * last signal number
      */
-    int singal_no;
+    int singal_no;              // 最后一次信号no
 
     uint32_t event_num;
-    uint32_t max_event_num;
+    uint32_t max_event_num;     //
 
     uint32_t check_timer :1;
-    uint32_t running :1;
-    uint32_t start :1;
+    uint32_t running :1;        // 运行
+    uint32_t start :1;          // 开始
 
     /**
      * disable accept new connection
      */
-    uint32_t disable_accept :1;
+    uint32_t disable_accept :1;         // 
 
-    uint32_t check_signalfd :1;
+    uint32_t check_signalfd :1;         // 检查信号fd
 
     /**
      * multi-thread reactor, cannot realloc sockets.
@@ -1424,12 +1459,12 @@ struct _swReactor
 	/**
 	 * reactor->wait timeout (millisecond) or -1
 	 */
-	int32_t timeout_msec;
+	int32_t timeout_msec;           // reactor wait超时时间，微秒
 
-	uint16_t id; //Reactor ID
+	uint16_t id; //Reactor ID       
 	uint16_t flag; //flag
 
-    uint32_t max_socket;
+    uint32_t max_socket;            // 最大socket
 
 #ifdef SW_USE_MALLOC_TRIM
     time_t last_malloc_trim_time;
@@ -1444,7 +1479,7 @@ struct _swReactor
     /**
      * for thread
      */
-    swConnection *socket_list;
+    swConnection *socket_list;      // socket list
 
     /**
      * for process
@@ -1485,43 +1520,43 @@ struct _swWorker
 	/**
 	 * worker process
 	 */
-	pid_t pid;
+	pid_t pid;      // worker进程id
 
 	/**
 	 * worker thread
 	 */
-	pthread_t tid;
+	pthread_t tid;      // worker进程线程id
 
-	swProcessPool *pool;
+	swProcessPool *pool;            // 进程池
 
-	swMemoryPool *pool_output;
+	swMemoryPool *pool_output;      // 输出内存池
 
-	swMsgQueue *queue;
+	swMsgQueue *queue;              // 消息队列
 
 	/**
 	 * redirect stdout to pipe_master
 	 */
-	uint8_t redirect_stdout;
+	uint8_t redirect_stdout;        // 重定向stdout到pipe_master
 
 	/**
      * redirect stdin to pipe_worker
      */
-    uint8_t redirect_stdin;
+    uint8_t redirect_stdin;         // 重定向stdin到pipe_worker
 
     /**
      * redirect stderr to pipe_worker
      */
-    uint8_t redirect_stderr;
+    uint8_t redirect_stderr;        // 重定向stderr到pipe_worker
 
 	/**
 	 * worker status, IDLE or BUSY
 	 */
-    uint8_t status;
+    uint8_t status;         // worker进程状态，空闲/繁忙
     uint8_t type;
-    uint8_t ipc_mode;
+    uint8_t ipc_mode;       // ipc模式
 
     uint8_t deleted;
-    uint8_t child_process;
+    uint8_t child_process;      // 子进程
 
     uint8_t traced;
     void (*tracer)(struct _swWorker *);
@@ -1529,26 +1564,26 @@ struct _swWorker
     /**
      * tasking num
      */
-    sw_atomic_t tasking_num;
+    sw_atomic_t tasking_num;        // tasking数
 
-    time_t start_time;
-    time_t request_time;
+    time_t start_time;              // 开始时间
+    time_t request_time;            // 请求时间
 
-    long request_count;
+    long request_count;             // 请求数
 
 	/**
 	 * worker id
 	 */
-	uint32_t id;
+	uint32_t id;        // worker id
 
 	swLock lock;
 
-	void *send_shm;
+	void *send_shm;     // 发送共享内存区
 
 	swPipe *pipe_object;
 
-	int pipe_master;
-	int pipe_worker;
+	int pipe_master;    // master进程pipe
+	int pipe_worker;    // worker进程pipe
 
 	int pipe;
 	void *ptr;
@@ -1567,38 +1602,38 @@ struct _swProcessPool
     /**
      * reloading
      */
-    uint8_t reloading;
-    uint8_t reload_flag;
-    uint8_t dispatch_mode;
-    uint8_t ipc_mode;
+    uint8_t reloading;          // 重新加载
+    uint8_t reload_flag;        // 重新加载flag
+    uint8_t dispatch_mode;      // dispatch模式
+    uint8_t ipc_mode;           // ipc模式
 
     /**
      * process type
      */
-    uint8_t type;
+    uint8_t type;               // 进程类型
 
     /**
      * worker->id = start_id + i
      */
-    uint16_t start_id;
+    uint16_t start_id;          // worker->id = start_id + i
 
     /**
      * use message queue IPC
      */
-    uint8_t use_msgqueue;
+    uint8_t use_msgqueue;       // 使用IPC消息队列
 
     /**
      * use stream socket IPC
-     */
-    uint8_t use_socket;
+     */ 
+    uint8_t use_socket;         // 使用IPC流式socket
 
     /**
      * message queue key
      */
-    key_t msgqueue_key;
+    key_t msgqueue_key;         // 消息队列key
 
-    int worker_num;
-    int max_request;
+    int worker_num;             // worker进程数    
+    int max_request;            // 最大请求数
 
     int (*onTask)(struct _swProcessPool *pool, swEventData *task);
 
@@ -1609,13 +1644,13 @@ struct _swProcessPool
     int (*onWorkerNotFound)(struct _swProcessPool *pool, pid_t pid, int status);
 
     sw_atomic_t round_id;
-    sw_atomic_t run_worker_num;
+    sw_atomic_t run_worker_num;     // 正在运行的worker数
 
-    swWorker *workers;
-    swPipe *pipes;
+    swWorker *workers;          // worker
+    swPipe *pipes;              // 管道
     swHashMap *map;
-    swReactor *reactor;
-    swMsgQueue *queue;
+    swReactor *reactor;         // reactor
+    swMsgQueue *queue;          // 消息队列
     swStreamInfo *stream;
 
     void *ptr;
@@ -1679,6 +1714,7 @@ static sw_inline int swReactor_events(int fdtype)
 int swReactor_create(swReactor *reactor, int max_event);
 int swReactor_setHandle(swReactor *, int, swReactor_handle);
 
+// 从reactor中获取socket
 static sw_inline swConnection* swReactor_get(swReactor *reactor, int fd)
 {
     if (reactor->thread)
@@ -1792,6 +1828,7 @@ int swProcessPool_dispatch_blocking(swProcessPool *pool, swEventData *data, int 
 int swProcessPool_add_worker(swProcessPool *pool, swWorker *worker);
 int swProcessPool_del_worker(swProcessPool *pool, swWorker *worker);
 
+// 进程池中获取worker id，worker->id = start_id + i
 static sw_inline swWorker* swProcessPool_get_worker(swProcessPool *pool, int worker_id)
 {
     return &(pool->workers[worker_id - pool->start_id]);
@@ -1851,22 +1888,24 @@ swLinkedList_node* swLinkedList_find(swLinkedList *ll, void *data);
 void swLinkedList_free(swLinkedList *ll);
 #define swLinkedList_remove(ll, data) (swLinkedList_remove_node(ll, swLinkedList_find(ll, data)))
 /*----------------------------Thread Pool-------------------------------*/
+// 线程
 enum swThread_type
 {
-    SW_THREAD_MASTER = 1,
-    SW_THREAD_REACTOR = 2,
-    SW_THREAD_WORKER = 3,
-    SW_THREAD_UDP = 4,
-    SW_THREAD_UNIX_DGRAM = 5,
-    SW_THREAD_HEARTBEAT = 6,
+    SW_THREAD_MASTER = 1,           // master
+    SW_THREAD_REACTOR = 2,          // reactor
+    SW_THREAD_WORKER = 3,           // worker
+    SW_THREAD_UDP = 4,              // udp
+    SW_THREAD_UNIX_DGRAM = 5,       // unix数据报
+    SW_THREAD_HEARTBEAT = 6,        // 心跳
 };
 
+// 线程池
 typedef struct _swThreadPool
 {
-    swCond cond;
+    swCond cond;                // 条件变量
 
-    swThread *threads;
-    swThreadParam *params;
+    swThread *threads;          // 线程组
+    swThreadParam *params;      // 线程参数
 
     void *ptr1;
     void *ptr2;
@@ -1877,9 +1916,9 @@ typedef struct _swThreadPool
     swRingQueue queue;
 #endif
 
-    int thread_num;
-    int shutdown;
-    sw_atomic_t task_num;
+    int thread_num;             // 线程数
+    int shutdown;               // 是否关闭
+    sw_atomic_t task_num;       // task数
 
     void (*onStart)(struct _swThreadPool *pool, int id);
     void (*onStop)(struct _swThreadPool *pool, int id);
@@ -1889,9 +1928,9 @@ typedef struct _swThreadPool
 
 struct _swThread
 {
-    pthread_t tid;
+    pthread_t tid;              // 线程id
     int id;
-    swThreadPool *pool;
+    swThreadPool *pool;         // 线程池
 };
 
 int swThreadPool_dispatch(swThreadPool *pool, void *task, int task_len);
@@ -1910,6 +1949,7 @@ typedef struct _swTimer_node swTimer_node;
 
 typedef void (*swTimerCallback)(swTimer *, swTimer_node *);
 
+// 时间节点
 struct _swTimer_node
 {
     swHeap_node *heap_node;
@@ -1975,19 +2015,19 @@ void swTimeWheel_remove(swTimeWheel *tw, swConnection *conn);
 //Share Memory
 typedef struct
 {
-    pid_t master_pid;
-    pid_t manager_pid;
+    pid_t master_pid;       // master进程id
+    pid_t manager_pid;      // manager进程id
 
     uint32_t session_round :24;
-    sw_atomic_t start;  //after swServer_start will set start=1
+    sw_atomic_t start;  //after swServer_start will set start=1，server启动
 
-    time_t now;
+    time_t now;             // server当前时间
 
-    sw_atomic_t spinlock;
+    sw_atomic_t spinlock;   // 自旋锁
     swLock lock;
     swLock lock_2;
 
-    swProcessPool task_workers;
+    swProcessPool task_workers;     // 
     swProcessPool event_workers;
 
 } swServerGS;
@@ -1998,26 +2038,26 @@ typedef struct
     /**
      * Always run
      */
-    uint8_t run_always;
+    uint8_t run_always;             // 一直运行
 
     /**
      * Current Proccess Worker's id
      */
-    uint32_t id;
+    uint32_t id;                    // 当前worker进程id
 
     /**
      * pipe_worker
      */
-    int pipe_used;
+    int pipe_used;                  // 当前使用的pipe_worker
 
     uint32_t reactor_wait_onexit :1;
-    uint32_t reactor_init :1;
-    uint32_t reactor_ready :1;
+    uint32_t reactor_init :1;       // reactor是否初始化
+    uint32_t reactor_ready :1;      // reactor是否ready
     uint32_t in_client :1;
-    uint32_t shutdown :1;
+    uint32_t shutdown :1;           // 是否关闭
     uint32_t wait_exit :1;
 
-    int max_request;
+    int max_request;                // 最大请求数
 
 #ifdef SW_COROUTINE
     swLinkedList *coro_timeout_list;
@@ -2030,15 +2070,16 @@ typedef struct
 
 } swWorkerG;
 
+// 全局thread变量
 typedef struct
 {
     uint16_t id;
     uint8_t type;
-    uint8_t update_time;
-    uint8_t factory_lock_target;
-    int16_t factory_target_worker;
+    uint8_t update_time;                // 更新时间
+    uint8_t factory_lock_target;        // factory锁定目标
+    int16_t factory_target_worker;      // factory目标worker
     swString **buffer_input;
-    swReactor *reactor;
+    swReactor *reactor;                 // 对应reactor
 } swThreadG;
 
 typedef struct
@@ -2053,13 +2094,14 @@ typedef struct
 typedef struct _swServer swServer;
 typedef struct _swFactory swFactory;
 
+// 全局变量
 typedef struct
 {
-    swTimer timer;
+    swTimer timer;                  // 时间
 
-    uint8_t running :1;
-    uint8_t use_timerfd :1;
-    uint8_t use_signalfd :1;
+    uint8_t running :1;             // 是否运行
+    uint8_t use_timerfd :1;         // 是否使用timerfd
+    uint8_t use_signalfd :1;        // 是否使用信号fd
     uint8_t enable_signalfd :1;
     uint8_t reuse_port :1;
     uint8_t socket_dontwait :1;
@@ -2075,7 +2117,7 @@ typedef struct
 
     int error;
     int process_type;
-    pid_t pid;
+    pid_t pid;          // 进程id
 
     int signal_alarm;  //for timer with message queue
     int signal_fd;
@@ -2090,21 +2132,21 @@ typedef struct
     char *user;
     char *group;
 
-    uint8_t log_level;
-    char *log_file;
+    uint8_t log_level;              // 日志等级
+    char *log_file;                 // 日志文件
 
     /**
      *  task worker process num
      */
-    uint16_t task_worker_num;
-    char *task_tmpdir;
-    uint16_t task_tmpdir_len;
-    uint8_t task_ipc_mode;
-    uint16_t task_max_request;
+    uint16_t task_worker_num;       // task进程数
+    char *task_tmpdir;              // task临时目录
+    uint16_t task_tmpdir_len;       // task临时目录长度
+    uint8_t task_ipc_mode;          // task ipc模式
+    uint16_t task_max_request;      // task最大请求数
 
-    uint16_t cpu_num;
+    uint16_t cpu_num;               // cpu数
 
-    uint32_t pagesize;
+    uint32_t pagesize;              // 内存分页大小     
     uint32_t max_sockets;
     struct utsname uname;
 
@@ -2117,7 +2159,7 @@ typedef struct
     swFactory *factory;
 
     swMemoryPool *memory_pool;
-    swReactor *main_reactor;
+    swReactor *main_reactor;            // main reactor
 
     swPipe *task_notify;
     swEventData *task_result;
@@ -2134,21 +2176,22 @@ typedef struct
 
 } swServerG;
 
+// 全局状态变量
 typedef struct
 {
-    time_t start_time;
-    sw_atomic_t connection_num;
-    sw_atomic_t tasking_num;
-    sw_atomic_long_t accept_count;
-    sw_atomic_long_t close_count;
-    sw_atomic_long_t request_count;
+    time_t start_time;                  // 开始时间
+    sw_atomic_t connection_num;         // 连接时间
+    sw_atomic_t tasking_num;            // 正在处理的task数
+    sw_atomic_long_t accept_count;      // accept数
+    sw_atomic_long_t close_count;       // close数
+    sw_atomic_long_t request_count;     // 请求数
 } swServerStats;
 
 extern swServerG SwooleG;              //Local Global Variable
 extern swServerGS *SwooleGS;           //Share Memory Global Variable
 extern swWorkerG SwooleWG;             //Worker Global Variable
 extern __thread swThreadG SwooleTG;   //Thread Global Variable
-extern swServerStats *SwooleStats;
+extern swServerStats *SwooleStats;      // Stats Global Variable
 
 #define SW_CPU_NUM                    (SwooleG.cpu_num)
 
@@ -2161,6 +2204,7 @@ int swoole_sendfile(int out_fd, int in_fd, off_t *offset, size_t size);
 #define swoole_sendfile(out_fd, in_fd, offset, limit)    sendfile(out_fd, in_fd, offset, limit)
 #endif
 
+// 自旋锁
 static sw_inline void sw_spinlock(sw_atomic_t *lock)
 {
     uint32_t i, n;

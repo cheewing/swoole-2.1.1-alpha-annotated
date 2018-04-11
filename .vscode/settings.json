@@ -1,0 +1,32 @@
+{
+    "files.associations": {
+        "array.h": "c",
+        "stdint.h": "c",
+        "uthash.h": "c",
+        "_uint32_t.h": "c",
+        "_uint16_t.h": "c",
+        "swoole.h": "c",
+        "sem.h": "c",
+        "server.h": "c",
+        "stdio.h": "c",
+        "async.h": "c",
+        "table.h": "c",
+        "client.h": "c",
+        "host_priv.h": "c",
+        "kmod.h": "c",
+        "mach_host.h": "c",
+        "task.h": "c",
+        "vm_map.h": "c",
+        "_pthread_rwlock_t.h": "c",
+        "atomic.h": "c",
+        "processor_info.h": "c",
+        "unistd.h": "c",
+        "pthread.h": "c",
+        "_pthread_mutexattr_t.h": "c",
+        "resource.h": "c",
+        "stddef.h": "c",
+        "_size_t.h": "c",
+        "signal.h": "c",
+        "socket.h": "c"
+    }
+}

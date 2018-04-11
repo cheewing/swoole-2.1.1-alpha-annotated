@@ -16,6 +16,7 @@
 
 #include "swoole.h"
 
+// 创建swoole字符串，字符串数据大小为size
 swString *swString_new(size_t size)
 {
     swString *str = sw_malloc(sizeof(swString));

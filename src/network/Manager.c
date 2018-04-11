@@ -64,6 +64,7 @@ int swManager_start(swFactory *factory)
         swServer_store_pipe_fd(serv, serv->workers[i].pipe_object);
     }
 
+    // Task Worker Process
     if (SwooleG.task_worker_num > 0)
     {
         if (swServer_create_task_worker(serv) < 0)
@@ -123,12 +124,12 @@ int swManager_start(swFactory *factory)
     //fork manager process
     case 0:
         //wait master process
-        SW_START_SLEEP;
+        SW_START_SLEEP;             // sleep 1s，等master进程执行完毕
         if (SwooleGS->start == 0)
         {
             return SW_OK;
         }
-        swServer_close_listen_port(serv);
+        swServer_close_listen_port(serv);   // 关闭TCP流式socket
 
         /**
          * create task worker process
@@ -173,14 +174,14 @@ int swManager_start(swFactory *factory)
             }
         }
 
-        SwooleG.process_type = SW_PROCESS_MANAGER;
-        SwooleG.pid = getpid();
-        exit(swManager_loop(factory));
+        SwooleG.process_type = SW_PROCESS_MANAGER;          // Manager进程的SwooleG.process_type设为Manager进程
+        SwooleG.pid = getpid();                             // Manager进程id
+        exit(swManager_loop(factory));                      // Manager进程循环
         break;
 
         //master process
     default:
-        SwooleGS->manager_pid = pid;
+        SwooleGS->manager_pid = pid;                        // Manager进程id
         break;
     case -1:
         swError("fork() failed.");
@@ -201,6 +202,7 @@ static void swManager_check_exit_status(swServer *serv, int worker_id, pid_t pid
     }
 }
 
+// Manager进程循环
 static int swManager_loop(swFactory *factory)
 {
     int pid, new_pid;
@@ -222,11 +224,13 @@ static int swManager_loop(swFactory *factory)
         swServer_call_hook_func(serv, SW_SERVER_HOOK_MANAGER_START);
     }
 
+    // onManagerStart回调
     if (serv->onManagerStart)
     {
         serv->onManagerStart(serv);
     }
 
+    // 载入的worker进程数 
     reload_worker_num = serv->worker_num + SwooleG.task_worker_num;
     reload_workers = sw_calloc(reload_worker_num, sizeof(swWorker));
     if (reload_workers == NULL)
@@ -254,6 +258,7 @@ static int swManager_loop(swFactory *factory)
 
     SwooleG.main_reactor = NULL;
 
+    // server运行中
     while (SwooleG.running > 0)
     {
         _wait: pid = wait(&status);
@@ -276,7 +281,7 @@ static int swManager_loop(swFactory *factory)
             ManagerProcess.read_message = 0;
         }
 
-        if (pid < 0)
+        if (pid < 0)    // wait返回错误
         {
             if (ManagerProcess.alarm == 1)
             {
@@ -434,8 +439,9 @@ static int swManager_loop(swFactory *factory)
         }
     }
 
-    sw_free(reload_workers);
-	swSignal_none();
+    // server终止退出
+    sw_free(reload_workers);        // 释放所有reload_workers
+	swSignal_none();                // 清除所有信号
     //kill all child process
     for (i = 0; i < serv->worker_num; i++)
     {
@@ -461,6 +467,7 @@ static int swManager_loop(swFactory *factory)
         swManager_kill_user_worker(serv);
     }
 
+    // onManagerStop回调
     if (serv->onManagerStop)
     {
         serv->onManagerStop(serv);

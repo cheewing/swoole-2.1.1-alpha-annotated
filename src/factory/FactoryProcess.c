@@ -30,6 +30,7 @@ static int swFactoryProcess_end(swFactory *factory, int fd);
 int swFactoryProcess_create(swFactory *factory, int worker_num)
 {
     swFactoryProcess *object;
+    // 全局共享内存存储swFactoryProcess
     object = SwooleG.memory_pool->alloc(SwooleG.memory_pool, sizeof(swFactoryProcess));
     if (object == NULL)
     {
@@ -73,14 +74,14 @@ static int swFactoryProcess_start(swFactory *factory)
 
     for (i = 0; i < serv->worker_num; i++)
     {
-        worker = swServer_get_worker(serv, i);
-        if (swWorker_create(worker) < 0)
+        worker = swServer_get_worker(serv, i);      // 从全局共享内存中取出worker
+        if (swWorker_create(worker) < 0)            // 给worker创建共享内存区和互斥锁
         {
             return SW_ERR;
         }
     }
 
-    serv->reactor_pipe_num = serv->worker_num / serv->reactor_num;
+    serv->reactor_pipe_num = serv->worker_num / serv->reactor_num;  // reactor线程和worker进程通信的pipe数
 
     //必须先启动manager进程组，否则会带线程fork
     if (swManager_start(factory) < 0)

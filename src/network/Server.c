@@ -292,6 +292,7 @@ static int swServer_start_check(swServer *serv)
 static int swServer_start_proxy(swServer *serv)
 {
     int ret;
+    // 全局共享内存存储main_reactor
     swReactor *main_reactor = SwooleG.memory_pool->alloc(SwooleG.memory_pool, sizeof(swReactor));
 
     ret = swReactor_create(main_reactor, SW_REACTOR_MAXEVENTS);
@@ -373,6 +374,7 @@ static int swServer_start_proxy(swServer *serv)
         swServer_call_hook_func(serv, SW_SERVER_HOOK_MASTER_START);
     }
 
+    // onStart回调
     if (serv->onStart != NULL)
     {
         serv->onStart(serv);
@@ -530,15 +532,15 @@ int swServer_worker_init(swServer *serv, swWorker *worker)
 #endif
 
     //signal init
-    swWorker_signal_init();
+    swWorker_signal_init();         // worker进程信号初始化，慢慢品味
 
-    SwooleWG.buffer_input = swServer_create_worker_buffer(serv);
+    SwooleWG.buffer_input = swServer_create_worker_buffer(serv);  // 跟package_max_length有关，最大数据包尺寸，单位为字节
     if (!SwooleWG.buffer_input)
     {
         return SW_ERR;
     }
 
-    if (serv->max_request < 1)
+    if (serv->max_request < 1)    // 设置worker进程的最大任务数，默认为0，一个worker进程在处理完超过此数值的任务后将自动退出，进程退出后会释放所有内存和资源。
     {
         SwooleWG.run_always = 1;
     }
@@ -582,6 +584,7 @@ void swServer_reopen_log_file(swServer *serv)
     }
 }
 
+// swoole server 启动
 int swServer_start(swServer *serv)
 {
     swFactory *factory = &serv->factory;
@@ -603,7 +606,7 @@ int swServer_start(swServer *serv)
     {
         swLog_init(SwooleG.log_file);
     }
-    //run as daemon
+    //run as daemon 守护进程
     if (serv->daemonize > 0)
     {
         /**
@@ -636,8 +639,8 @@ int swServer_start(swServer *serv)
     }
 
     //master pid
-    SwooleGS->master_pid = getpid();
-    SwooleGS->now = SwooleStats->start_time = time(NULL);
+    SwooleGS->master_pid = getpid();            // master pid
+    SwooleGS->now = SwooleStats->start_time = time(NULL);       // server开始时间
 
     if (serv->dispatch_mode == SW_DISPATCH_STREAM)
     {
@@ -659,6 +662,7 @@ int swServer_start(swServer *serv)
     serv->sendfile = swServer_tcp_sendfile;
     serv->close = swServer_tcp_close;
 
+    // 全局共享内存存储swWorker
     serv->workers = SwooleG.memory_pool->alloc(SwooleG.memory_pool, serv->worker_num * sizeof(swWorker));
     if (serv->workers == NULL)
     {
@@ -669,7 +673,7 @@ int swServer_start(swServer *serv)
     /**
      * store to swProcessPool object
      */
-    SwooleGS->event_workers.workers = serv->workers;
+    SwooleGS->event_workers.workers = serv->workers;        // workers存储到swProcessPool
     SwooleGS->event_workers.worker_num = serv->worker_num;
     SwooleGS->event_workers.use_msgqueue = 0;
 
@@ -760,13 +764,13 @@ void swServer_init(swServer *serv)
     swoole_init();
     bzero(serv, sizeof(swServer));
 
-    serv->factory_mode = SW_MODE_BASE;
+    serv->factory_mode = SW_MODE_BASE;      // 单线程模式
 
     serv->reactor_num = SW_REACTOR_NUM > SW_REACTOR_MAX_THREAD ? SW_REACTOR_MAX_THREAD : SW_REACTOR_NUM;
 
-    serv->dispatch_mode = SW_DISPATCH_FDMOD;
+    serv->dispatch_mode = SW_DISPATCH_FDMOD;    // FD取模，Worker与Reactor通信模式
 
-    serv->worker_num = SW_CPU_NUM;
+    serv->worker_num = SW_CPU_NUM;      // worker进程数和cpu数保持一致
     serv->max_connection = SwooleG.max_sockets < SW_SESSION_LIST_SIZE ? SwooleG.max_sockets : SW_SESSION_LIST_SIZE;
 
     serv->max_request = 0;
@@ -783,13 +787,13 @@ void swServer_init(swServer *serv)
     serv->buffer_input_size = SW_BUFFER_INPUT_SIZE;
     serv->buffer_output_size = SW_BUFFER_OUTPUT_SIZE;
 
-    SwooleG.serv = serv;
+    SwooleG.serv = serv;        // 赋给本地全局变量serv
     SwooleG.task_ipc_mode = SW_TASK_IPC_UNIXSOCK;
 }
 
 int swServer_create(swServer *serv)
 {
-    if (SwooleG.main_reactor)
+    if (SwooleG.main_reactor)       // 如果main_reactor已经存在，
     {
         swoole_error_log(SW_LOG_ERROR, SW_ERROR_SERVER_MUST_CREATED_BEFORE_CLIENT, "The swoole_server must create before client");
         return SW_ERR;
@@ -797,7 +801,7 @@ int swServer_create(swServer *serv)
 
     SwooleG.factory = &serv->factory;
 
-    serv->factory.ptr = serv;
+    serv->factory.ptr = serv;       // serv赋给factory.ptr
 
 #ifdef SW_REACTOR_USE_SESSION
     serv->session_list = sw_shm_calloc(SW_SESSION_LIST_SIZE, sizeof(swSession));
